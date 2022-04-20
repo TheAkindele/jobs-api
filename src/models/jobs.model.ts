@@ -1,4 +1,5 @@
 import {model, Schema, Types} from "mongoose"
+import { UserDocument } from "./user.model";
 
 
 export interface IJobs {
@@ -6,6 +7,7 @@ export interface IJobs {
     company: string;
     salary: string;
     createdBy?: Types.ObjectId 
+    // createdBy: UserDocument["_id"]
 }
 
 const JobsSchema = new Schema<IJobs>({

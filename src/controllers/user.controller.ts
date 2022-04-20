@@ -32,13 +32,6 @@ export const createUser = async (req: Request<{}, {}, createUserInput["body"]>, 
 
     // const user = omit(newUser.toJSON(), "password")
 
-    // // now we call the createJWT mongoose instance method  
-    // const token = user.createJWT()
-    // const token = jwt.sign(
-    //     {userId: user._id, email: user.email, role: user.role}, 
-    //     `${process.env.JOBS_API_JWT_SECRET}`, 
-    //     {expiresIn: "10d"}
-    // )
     const token = await user.createJWT()
 
     res.status(StatusCodes.CREATED).json({user, token})

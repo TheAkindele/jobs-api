@@ -3,9 +3,6 @@ import jwt from "jsonwebtoken"
 import { UserModel, IUser, UserDocument } from "../../models"
 import { BadRequestError, UnAuthorizedError } from "../errors"
 import {omit} from "lodash" 
-import { createUserInput, createUserSchema } from "../../types/user.types"
-import { validateResource } from "../validateResource"
-//import { reqType } from "utils/interfaces"
 
 export interface reqType extends Request {
   user?: UserDocument;
@@ -24,8 +21,12 @@ export const authorizationMiddlewear = async (req: Request, res: Response, next:
     const token = requestHeader.split(" ")[1]
     try {
       // here we verify the token in the client headers
-      const decodedToken = await jwt.verify(token, `${process.env.JOBS_API_JWT_SECRET}`)
-      // console.log(decodedToken, typeof decodedToken)
+      const decodedToken = await jwt.verify(token, `${process.env.JOBS_API_JWT_SECRET}`,
+        /// we can as well check to confirm token has nit expired 
+        // (err: any) => {
+        //   if (err) "token expired"
+        // }
+      )
 
       const {userId}: any = decodedToken
 
@@ -39,12 +40,12 @@ export const authorizationMiddlewear = async (req: Request, res: Response, next:
       // req.user = {name, email, userId: _id}
 
       //2. we use the lodash omit fxn to remove an obj prop
-      const user = await UserModel.findOne({_id: userId})
+      const user = await UserModel.findOne({_id: userId}).select("-password")
 
       if (!user) throw new BadRequestError("No user found")
 
-      request.user = user.toJSON()
-      //omit(user?.toJSON(), "password")
+      request.user = user
+      // omit(user?.toJSON(), "password")
 
       
       request.token = token

@@ -1,21 +1,29 @@
 import {Response, Request, NextFunction} from "express"
 import mongoose from "mongoose"
 import { BadRequestError, UnAuthorizedError } from "../middlewears/errors"
-import { JobsModel, IJobs } from "../models/jobs.model"
+import { JobsModel, IJobs, UserDocument } from "../models"
 import { StatusCodes } from "http-status-codes"
 import jwt from "jsonwebtoken"
+import { reqType } from "utils/interfaces"
+
 
 // Jobpriviledges are given w.r.t user role
 //1. Job sdvertiser:: Create job, getAllUserPostedJobs, getSingleUserjob, edit/delete job
 //2. Job seeker:: fetch all jobs, fetch jobs from a particular recruiter, fetch single job
 
+export interface reqInterface extends Request {
+    user: UserDocument;
+    token: string
+  }
+
 // only recruiter can create/post jobs
 export const createJob = async (req: Request, res: Response) => {
-    //@ts-ignore
-   req.body.createdBy = req.user.userId
+    const request = req as reqInterface
 
-   //@ts-ignore
-   const token = req.token
+    const user = req.user
+    req.body.createdBy = user?._id
+
+    const token = request.token
 
    //check that user role is recruiter
     const decodedToken = await jwt.verify(token, `${process.env.JOBS_API_JWT_SECRET}`)
@@ -27,24 +35,18 @@ export const createJob = async (req: Request, res: Response) => {
 
    const job = await JobsModel.create(req.body)
  
-   res.status(StatusCodes.CREATED).json({job, token })
+   res.status(StatusCodes.CREATED).json({job, user, token })
 }
 
-// only job seeker can get all jobs posted
+//job seekers gets all jobs posted by anyone while recruiter gets all jobs posted by them only
 export const getAllJobs = async (req: Request, res: Response) => {
-    //@ts-ignore
+    const request = req as reqInterface
+    
     const user = req.user
-    //@ts-ignore
-    const token = req.token
+    
+    const token = request.token
 
     let allJobs
-
-    // const decodedToken = await jwt.verify(token, `${process.env.JOBS_API_JWT_SECRET}`)
-    // const {role}: any = decodedToken
-
-    // if (user?.role !== "candidate" || user?.role !== "recruiter") {
-    //     throw new UnAuthorizedError("User is not authorized")
-    // }
 
     if (user?.role === "candidate") {
          allJobs = await JobsModel.find({})
@@ -60,67 +62,35 @@ export const getAllJobs = async (req: Request, res: Response) => {
     res.status(StatusCodes.OK).json({jobs: allJobs, user})
 }
 
-//recruiter get all jobs created by them only
-export const getMyJobs = async (req: Request, res: Response) => {
-     //@ts-ignore
-     const user = req.user
-     //@ts-ignore
-     const token = req.token
- 
-     if (user?.role !== "recruiter" ) {
-         throw new UnAuthorizedError("User is not authorized")
-     }
- 
-     const allJobs = await JobsModel.find({createdBy: user._id})
-     res.status(StatusCodes.OK).json({allJobs, user})
-}
-
-//job recruiter get a single job created by them only
-export const getMyJob = async (req: Request, res: Response) => {
-    //@ts-ignore
-    const user = req.user
-    //@ts-ignore
-    const {id: jobId} = req.params
-
-    if (user?.role !== "recruiter" ) {
-        throw new UnAuthorizedError("User is not authorized")
-    }
-
-
-    const job = JobsModel.findOne({_id: jobId,  createdBy: user.userId})
-    res.status(StatusCodes.OK).json({job, user})
-}
-
-// job seekers gets any job created by any recruiter
+// recruiter can search for one of their jobs while job seekers gets any job created by any recruiter
 export const getSingleJob = async (req: Request, res: Response) => {
-    //@ts-ignore
+    
     const user = req.user
-    //@ts-ignore
+    
     const {id: jobId} = req.params
 
     let job
-
-    // if (user?.role !== "recruiter" ) {
-    //     throw new UnAuthorizedError("User is not authorized")
-    // }
 
     if (user?.role === "candidate") {
         job = await JobsModel.findById(jobId)
     }
 
     else if (user?.role === "recruiter") {
-        job = await JobsModel.findOne({_id: jobId,  createdBy: user.userId})
+        job = await JobsModel.findOne({_id: jobId,  createdBy: user?._id})
+        if (!job || job === null) {
+            throw new BadRequestError("User has no such job post")
+        }
     }
 
-    else throw new BadRequestError("Invalid user")
+    // else throw new BadRequestError("Invalid user")
 
     // const job = JobsModel.findOne({_id: jobId,  createdBy: user.userId})
     res.status(StatusCodes.OK).json({job, user})
 }
 
 // a recruiter can patch/update a job they posted
+// patch allows for partial update
 export const patchJob = async (req: Request, res: Response) => {
-    //@ts-ignore
     const user = req.user
     const {id: jobId} = req.params
 
@@ -138,11 +108,11 @@ export const patchJob = async (req: Request, res: Response) => {
     if (isEmpty) {
         throw new BadRequestError("request body cannot be empty")
     }
-    if (position === "" || company === "" || salary === "" ) {
-        throw new BadRequestError("fields cannot be empty")
-    }
+    // if (position === "" || company === "" || salary === "" ) {
+    //     throw new BadRequestError("fields cannot be empty")
+    // }
 
-    const job = await JobsModel.findOne({_id: jobId, createdBy: user.userId})
+    const job = await JobsModel.findOne({_id: jobId, createdBy: user._id})
    if (!job) {
        throw new BadRequestError("No such job available")
    }
@@ -153,10 +123,7 @@ export const patchJob = async (req: Request, res: Response) => {
 
 // a recruiter can put/edit a job they created
 export const putJob = async (req: Request, res: Response) => {
-
     const user = req.user
-    //@ts-ignore
-    const {userId} = user
 
     const {id: jobId} = req.params
     const {position, salary, company} = req.body
@@ -169,7 +136,7 @@ export const putJob = async (req: Request, res: Response) => {
         throw new BadRequestError("Must provide position, salary and company")
     }
 
-    const checkJob = await JobsModel.findOne({_id: jobId, createdBy: userId})
+    const checkJob = await JobsModel.findOne({_id: jobId, createdBy: user?._id})
     if (!checkJob) {
         throw new BadRequestError("Job not found")
     }
@@ -183,15 +150,14 @@ export const putJob = async (req: Request, res: Response) => {
 export const deleteJob = async (req: Request, res: Response) => {
     
     const user = req.user
-    //@ts-ignore
-    const {userId} = user
+    
     const {id: jobId} = req.params
 
     if (user?.role !== "recruiter" ) {
         throw new UnAuthorizedError("User is not authorized")
     }
 
-    const findJob = await JobsModel.findOne({_id: jobId, createdBy: userId})
+    const findJob = await JobsModel.findOne({_id: jobId, createdBy: user?._id})
 
     if (!findJob) {
         throw new BadRequestError("Job does not exist")
@@ -199,7 +165,7 @@ export const deleteJob = async (req: Request, res: Response) => {
 
     const deleteJob = await JobsModel.findByIdAndDelete(findJob._id)
 
-    const allJobs = await JobsModel.find({createdBy: user.userId})
+    const allJobs = await JobsModel.find({createdBy: user._id})
 
     const remainingJobs = allJobs.filter((job: any) => job._id !== deleteJob?._id)
 

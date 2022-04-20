@@ -10,21 +10,20 @@ const validateEmail = (email: string) => {
 };
 
 export interface UserDocument  {
-    // [x: string]: any;
     name: string;
     email: string;
     password: string;
     role: string;
 }
 
-export interface IUser {
+export interface IUser extends UserDocument {
     comparePassword(passwordInput: string): Promise<Boolean>;
     createJWT(): Promise<string>;
 }
 
-export interface UserInterface extends mongoose.Model<UserDocument> {
-    build(attr: IUser): UserDocument
-}
+// export interface UserInterface extends mongoose.Model<UserDocument> {
+//     build(attr: IUser): UserDocument
+// }
 
 const UserSchema = new Schema({
     name: {
@@ -61,9 +60,9 @@ UserSchema.pre('save', async function(next) {
     }
 })
 
-UserSchema.statics.build = (user: IUser) => {
-    return new UserModel(user)
-}
+// UserSchema.statics.build = function(user: IUser) {
+//     return new UserModel(user)
+// }
 
 // we can also use the mongoose instance methods to create our token like so
 UserSchema.methods.createJWT = async function (): Promise<string> {
@@ -82,5 +81,5 @@ UserSchema.methods.comparePassword = async function(passwordInput: string): Prom
     return isPasswordMatch
 }
 
-export const UserModel = model<IUser, UserInterface>("User", UserSchema)
+export const UserModel = model<IUser>("User", UserSchema)
 
