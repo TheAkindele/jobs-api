@@ -7,7 +7,6 @@
 //6. Job seeker can fetch all jobs create by an advertiser
 //7. Job advertiser can only edit job advert they created
 //8. Job advertiser can only delete job ad they created
-// 
 
 
 import express from 'express';
@@ -19,7 +18,7 @@ import { jobRouter, authRouter } from './routes';
 import { connectDb } from './connectDb';
 import { authorizationMiddlewear } from './middlewears/auth/auth.middlewear';
 
-//security packages
+//security packages imported below
 import helmet from "helmet"
 // import xss from "xss-clean"
 import cors from "cors"
@@ -59,7 +58,7 @@ app.use(errorHandler)
 const port = process.env.PORT || 6000
 const startServer = async () => {
     try {
-        await connectDb(process.env.JOBS_API_DB_URL)
+        connectDb(process.env.JOBS_API_DB_URL)
         console.log("DB connected---")
         app.listen(
             port, 

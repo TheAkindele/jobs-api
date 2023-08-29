@@ -21,7 +21,7 @@ export const authorizationMiddlewear = async (req: Request, res: Response, next:
     const token = requestHeader.split(" ")[1]
     try {
       // here we verify the token in the client headers
-      const decodedToken = await jwt.verify(token, `${process.env.JOBS_API_JWT_SECRET}`,
+      const decodedToken = jwt.verify(token, `${process.env.JOBS_API_JWT_SECRET}`,
         /// we can as well check to confirm token has nit expired 
         // (err: any) => {
         //   if (err) "token expired"

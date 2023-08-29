@@ -16,6 +16,7 @@ export interface UserDocument  {
     role: string;
 }
 
+// to attach the mongoose instances like createJWT to the user model type for TS purposes, we create the IUSer interface that extends the userDocument interface 
 export interface IUser extends UserDocument {
     comparePassword(passwordInput: string): Promise<Boolean>;
     createJWT(): Promise<string>;
@@ -32,7 +33,7 @@ const UserSchema = new Schema({
     },
     email: {
         type: String,
-        trim: true,
+        trim: true, // removes white spaces
         lowercase: true,
         unique: true,
         validate: [validateEmail, 'Please fill a valid email address'],
@@ -51,10 +52,12 @@ const UserSchema = new Schema({
 
 // we can use the mongoose middlewear (pre) to hash the p/word before saving
 UserSchema.pre('save', async function(next) {
+    // Only has the password if its new or has been modied
     if (this.isModified("password")) {
         const salt = await bcrypt.genSalt(12)
         this.password = await bcrypt.hash(this.password, salt)
     }
+    // else do not hash
     else {
         return next()
     }
@@ -75,7 +78,7 @@ UserSchema.methods.createJWT = async function (): Promise<string> {
     return token
 }
 
-//here we also use the instance method to compare hash pasword
+// we can use the mongoose instance method comparePassword to compare if the password sent by user with the hashed p/word on the DB
 UserSchema.methods.comparePassword = async function(passwordInput: string): Promise<boolean> {
     const isPasswordMatch = await bcrypt.compare(passwordInput, this.password)
     return isPasswordMatch

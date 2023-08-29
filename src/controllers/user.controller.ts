@@ -1,14 +1,11 @@
-import {Response, Request, NextFunction} from "express"
-import {UserModel, IUser} from "../models"
+import {Response, Request} from "express"
+import {UserModel} from "../models"
 import { BadRequestError, UnAuthorizedError } from "../middlewears/errors"
 import { StatusCodes } from "http-status-codes"
 import {omit} from "lodash"
-import bcrypt from "bcryptjs"
-import jwt from "jsonwebtoken"
 import { createUserInput } from "types/user.types"
 
-//createUser, login, verify email
-
+// notice that we are using the createUserInput type from zod validation we created
 export const createUser = async (req: Request<{}, {}, createUserInput["body"]>, res: Response) => {
     const {name, email, role, password, confirmPassword} = req.body
 

@@ -11,4 +11,3 @@ export class UnAuthorizedError extends CustomApiError {
     }
 }
 
-// module.exports = UnAuthorizedError

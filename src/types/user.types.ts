@@ -1,9 +1,11 @@
 import {object, string, TypeOf} from "zod"
 
+// we create user validation to help validate user data sent by client with zod validator
+// another validator that can be used is joi
 export const createUserSchema = object({
     body: object({
         name: string({
-            required_error: "Name is required"
+            required_error: "Name is Required"
         }),
         password: string({
             required_error: "Password is required"
@@ -23,4 +25,5 @@ export const createUserSchema = object({
     })
 })
 
+// we create the createUserInput type that omits confirmPassword since that will not be part of the user Model data stored on the DB
 export type createUserInput = TypeOf<Omit<typeof createUserSchema, "body.confirmPassword">>
